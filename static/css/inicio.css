@@ -1,61 +1,93 @@
+/* ================== Variables ================== */
 :root {
-  --card-bg: #f8fafc;           /* Fondo blanco de la tarjeta */
-  --card-hover: #e2e8f0;        /* Gris clarito al pasar cursor */
-  --text-light: #1e3a8a;        /* Texto azul fuerte */
-  --text-soft: rgba(30, 58, 138, 0.8);
+  --primary: #1e3a8a;
+  --primary-dark: #172554;
+  --background: #0f172a;
+  --surface: #1e293b;
+  --text: #f1f5f9;
+  --accent: #00c853;
 }
 
+/* ================== Base ================== */
 body {
-  background-color: #1e293b;    /* Fondo de página azul oscuro */
+  background-color: var(--background);
+  color: var(--text);
   font-family: 'Poppins', sans-serif;
   margin: 0;
-  padding: 30px;
 }
 
+a {
+  text-decoration: none;
+}
+
+/* ================== Tarjetas principales ================== */
 .dashboard-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  padding: 40px;
 }
 
 .small-box {
-  background-color: var(--card-bg);
-  color: var(--text-light);
-  border-radius: 16px;
-  padding: 30px 20px 25px 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  position: relative;
-  transition: transform 0.3s ease, background-color 0.3s ease;
+  background-color: var(--surface);
+  border-radius: 12px;
+  padding: 20px;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .small-box:hover {
   transform: translateY(-6px);
-  background-color: var(--card-hover);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.small-box .inner h3 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.small-box .inner p {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .small-box .icon {
-  position: absolute;
-  top: 15px;
-  right: 20px;
-  font-size: 2.3rem;
-  color: var(--text-light);
+  font-size: 2rem;
+  opacity: 0.8;
 }
 
-.small-box h3 {
-  font-size: 2.5rem;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: var(--text-light);
+/* ================== Contenedores de gráficas ================== */
+.report-box {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.small-box p {
-  margin: 0;
-  font-size: 1.05rem;
-  color: var(--text-soft);
+.report-box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
-@media (max-width: 576px) {
-  .small-box h3 {
-    font-size: 2rem;
+.report-box h6 {
+  color: #000000;
+  font-weight: 600;
+}
+
+.report-box canvas {
+  max-height: 200px !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* ================== Responsive ================== */
+@media (max-width: 768px) {
+  .dashboard-container {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 }

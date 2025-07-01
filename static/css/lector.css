@@ -137,3 +137,28 @@ footer {
 .text-claro {
   color: var(--text) !important;
 }
+
+/* CONTENEDORES DE GRÁFICAS */
+.report-box {
+  background-color: #ffffff; /* Fondo blanco para destacar sobre el background */
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.report-box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.report-box h6 {
+  color: #000000; /* Título oscuro para contraste */
+  font-weight: 600;
+}
+
+.report-box canvas {
+  max-height: 160px !important; /* Ajuste de altura máxima */
+  width: 100% !important;
+  height: auto !important;
+}

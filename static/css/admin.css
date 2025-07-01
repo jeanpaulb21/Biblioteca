@@ -18,7 +18,7 @@ body {
 
 /* NAVBAR */
 .navbar {
-  background: rgba(30, 41, 59, 0.8);
+  background: #17202e;
   backdrop-filter: blur(10px);
   padding: 9px 10px;
   border-bottom: 1px solid #334155;
@@ -188,29 +188,3 @@ iframe.fade-out {
     height: calc(100vh - 80px);
   }
 }
-
-
-/* CONTENEDORES DE GRÁFICOS */
-
-.report-box {
-  background-color: white;  /* Mismo color que tarjetas */
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.report-box:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.report-box h6 {
-  color: black;
-  font-weight: 600;
-}
-
-.report-box canvas {
-  max-height: 160px !important;
-}
-
