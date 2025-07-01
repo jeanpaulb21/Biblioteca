@@ -9,7 +9,19 @@
       {{ form.nombre(class="form-control", placeholder="Nombre completo") }}
     </div>
     {% for error in form.nombre.errors %}
-      <div class="error-message">{{ error }}</div>
+      <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+  </div>
+  
+  <!-- Documento -->
+  <div class="mb-3 text-start">
+    {{ form.documento.label(class="form-label") }}
+    <div class="input-group">
+      <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+      {{ form.documento(class="form-control", placeholder="Número de Documento") }}
+    </div>
+    {% for error in form.documento.errors %}
+      <div class="text-danger small">{{ error }}</div>
     {% endfor %}
   </div>
 
@@ -21,7 +33,7 @@
       {{ form.correo(class="form-control", placeholder="Correo electrónico") }}
     </div>
     {% for error in form.correo.errors %}
-      <div class="error-message">{{ error }}</div>
+      <div class="text-danger small">{{ error }}</div>
     {% endfor %}
   </div>
 
@@ -33,7 +45,7 @@
       {{ form.direccion(class="form-control", placeholder="Dirección") }}
     </div>
     {% for error in form.direccion.errors %}
-      <div class="error-message">{{ error }}</div>
+      <div class="text-danger small">{{ error }}</div>
     {% endfor %}
   </div>
 
@@ -42,41 +54,41 @@
     {{ form.submit(class="btn btn-success w-100") }}
   </div>
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const form = document.querySelector('form');
+  <!-- Script AJAX para enviar sin recargar -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const form = document.querySelector('form');
 
-    if (form) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
 
-        const formData = new FormData(form);
+          const formData = new FormData(form);
 
-        fetch(form.action, {
-          method: 'POST',
-          body: formData
-        })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              alert(data.mensaje);
-              // Ejemplo: cerrar modal y recargar lista de usuarios
-              const modal = bootstrap.Modal.getInstance(document.getElementById('modalLibro'));
-              if (modal) modal.hide();
-              // Recarga tabla si tienes función para eso:
-              // actualizarTablaUsuarios();
-            } else {
-              alert(data.mensaje || 'Error al registrar usuario.');
-              console.log(data.errores || '');
-            }
+          fetch(form.action, {
+            method: 'POST',
+            body: formData
           })
-          .catch(err => {
-            console.error('Error en la petición:', err);
-            alert('Error inesperado al registrar.');
-          });
-      });
-    }
-  });
-</script>
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert(data.mensaje);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalLibro'));
+                if (modal) modal.hide();
+                // Recarga tabla si tienes función para eso
+                // actualizarTablaUsuarios();
+              } else {
+                alert(data.mensaje || 'Error al registrar usuario.');
+                console.log(data.errores || '');
+              }
+            })
+            .catch(err => {
+              console.error('Error en la petición:', err);
+              alert('Error inesperado al registrar.');
+            });
+        });
+      }
+    });
+  </script>
 
 </form>

@@ -123,12 +123,23 @@ class EditarReservaForm(FlaskForm):
     ], validators=[DataRequired()])
     submit = SubmitField('Guardar cambios')
 
-class AgregarUsuarioForm(FlaskForm):
+class AgregarLectorPresencialForm(FlaskForm):
     nombre = StringField('Nombre', validators=[DataRequired(), Length(min=2, max=50)])
-    correo = StringField('Correo electrónico', validators=[DataRequired(), Email()])
+    documento = StringField('Número de Documento', validators=[DataRequired(), Length(min=5, max=20)])
     direccion = StringField('Dirección', validators=[DataRequired(), Length(min=5, max=100)])
+    correo = StringField('Correo', validators=[DataRequired(), Email(), Length(max=120)])
     submit = SubmitField('Registrar')
 
-    def validate_correo(self, correo):
-        if Usuario.query.filter_by(correo=correo.data).first():
-            raise ValidationError('Ya existe un usuario con este correo.')
+    def validate_documento(self, documento):
+        if Usuario.query.filter_by(documento=documento.data).first():
+            raise ValidationError('Ya existe un usuario con este número de documento.')
+
+
+class EditarUsuarioForm(FlaskForm):
+    nombre = StringField('Nombre', validators=[DataRequired()])
+    correo = StringField('Correo electrónico', validators=[DataRequired(), Email()])
+    direccion = StringField('Dirección', validators=[DataRequired()])
+    rol = SelectField('Rol', choices=[('lector', 'Lector'), ('bibliotecario', 'Bibliotecario'), ('administrador', 'Administrador')], validators=[DataRequired()])
+    submit = SubmitField('Guardar')
+
+

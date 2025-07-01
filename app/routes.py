@@ -12,7 +12,7 @@ import requests
 # Importa las extensiones correctamente
 from app.extensions import db, login_manager, mail
 from app.models import Usuario, Libro, Prestamo, Reserva, Favorito
-from app.forms import RegistroForm, LibroForm, EditarLibroForm, EditarReservaForm, NuevaReservaForm, PrestamoForm, AgregarUsuarioForm, ReservaLectorForm
+from app.forms import RegistroForm, LibroForm, EditarLibroForm, EditarReservaForm, NuevaReservaForm, PrestamoForm, ReservaLectorForm, AgregarLectorPresencialForm,  EditarUsuarioForm
 from app.utils import verificar_token, generar_token, generar_reporte_con_plantilla, generar_reporte_populares, generar_reporte_prestados
 from app.libro import prestar_libro, devolver_libro
 from PIL import Image
@@ -100,9 +100,15 @@ def login():
         usuario = Usuario.query.filter_by(correo=correo, activo=True).first()
 
         if usuario and usuario.check_password(password):
+            # ✅ Validar rol prohibido antes de permitir login
+            if usuario.rol == 'lector*':
+                flash('Tu cuenta no está habilitada para acceder al sistema.', 'danger')
+                return redirect(url_for('main.login'))
+
             login_user(usuario)
             flash('Has iniciado sesión.', 'success')
 
+            # ✅ Redirección según rol válido
             if usuario.rol == 'administrador':
                 return redirect(url_for('main.inicio'))
             elif usuario.rol == 'bibliotecario':
@@ -111,12 +117,13 @@ def login():
                 return redirect(url_for('main.catalogo'))
             else:
                 return redirect(url_for('main.index'))
+
         else:
-            # ⚠️ Aquí: Si no es válido, muestra mensaje de error
             flash('Correo o contraseña incorrectos', 'danger')
             return redirect(url_for('main.login'))
 
     return render_template('login.html')
+
 
 
 @main.route('/logout')
@@ -153,7 +160,7 @@ def toggle_usuario(usuario_id):
     estado = 'activado' if usuario.activo else 'desactivado'
     flash(f"El usuario '{usuario.nombre}' ha sido {estado}.", 'success')
     return redirect(url_for('main.lista_usuarios'))
-
+    
 @main.route('/usuarios/<int:usuario_id>/cambiar_rol', methods=['POST'])
 @login_required
 @roles_requeridos('administrador')
@@ -165,15 +172,14 @@ def cambiar_rol(usuario_id):
         return redirect(url_for('main.lista_usuarios'))
 
     nuevo_rol = request.form.get('rol')
-    roles_permitidos = ['lector', 'bibliotecario']
 
-    if nuevo_rol not in roles_permitidos:
-        flash('Solo puedes cambiar roles entre lector y bibliotecario.', 'error')
+    if nuevo_rol not in ['lector', 'bibliotecario', 'administrador']:
+        flash('Rol inválido.', 'error')
         return redirect(url_for('main.lista_usuarios'))
 
     usuario.rol = nuevo_rol
     db.session.commit()
-    flash(f"El rol del usuario '{usuario.nombre}' ha sido cambiado a {nuevo_rol}.", 'success')
+    flash('Rol actualizado correctamente.', 'success')
     return redirect(url_for('main.lista_usuarios'))
 
 @main.route('/admin/inicio', endpoint='inicio')
@@ -276,54 +282,44 @@ def mostrar_usuarios():
     usuarios = Usuario.query.all()
     return render_template('usuarios_mostrar.html', usuarios=usuarios)
 
-@main.route('/admin/usuarios/agregar', methods=['GET', 'POST'])
-@login_required
-@roles_requeridos('administrador', 'bibliotecario')
-def agregar_usuario():
-    form = AgregarUsuarioForm()
-
-    if form.validate_on_submit():
-        nombre = form.nombre.data.strip() if form.nombre.data else '-'
-        correo = form.correo.data.strip()
-        direccion = form.direccion.data.strip() if form.direccion.data else '-'
-
-        # ⚠️ Aquí valores seguros para campos faltantes
-        apellido = '-'
-        documento = '-'
-        telefono = '-'
-        from datetime import date
-        fecha_nacimiento = date(2000, 1, 1)  # o lo que quieras
-
-        if Usuario.query.filter_by(correo=correo).first():
-            return 'Correo ya registrado', 400
-
-        nuevo_usuario = Usuario(
-            nombre=nombre,
-            apellido=apellido,
-            correo=correo,
-            documento=documento,
-            direccion=direccion,
-            telefono=telefono,
-            fecha_nacimiento=fecha_nacimiento,
-            rol='lector',
-            activo=True
-        )
-
-        nuevo_usuario.set_password('123456')  # temporal
-
-        db.session.add(nuevo_usuario)
-        db.session.commit()
-
-        return 'Usuario registrado', 200
-
-    return render_template('registro_fragmento.html', form=form)
-
 @main.route('/admin/usuarios/editar_formulario/<int:id>')
 @login_required
 @roles_requeridos('administrador')
 def editar_formulario_usuario(id):
     usuario = Usuario.query.get_or_404(id)
-    return render_template('partials/usuarios_editar.html', usuario=usuario)
+    form = EditarUsuarioForm(
+        nombre=usuario.nombre,
+        correo=usuario.correo,
+        direccion=usuario.direccion,
+        rol=usuario.rol
+    )
+    return render_template(
+        'partials/usuarios_editar.html',
+        form=form,
+        usuario=usuario
+    )
+
+@main.route('/admin/usuarios/editar/<int:id>', methods=['POST'])
+@login_required
+@roles_requeridos('administrador')
+def editar_usuario(id):
+    usuario = Usuario.query.get_or_404(id)
+    form = EditarUsuarioForm()
+
+    if form.validate_on_submit():
+        usuario.nombre = form.nombre.data
+        usuario.correo = form.correo.data
+        usuario.direccion = form.direccion.data
+        usuario.rol = form.rol.data
+
+        db.session.commit()
+        flash("Usuario actualizado correctamente.", "success")
+        return redirect(url_for('main.mostrar_usuarios'))
+    else:
+        flash("Error al validar el formulario.", "danger")
+
+    return redirect(url_for('main.mostrar_usuarios'))
+
 
 @main.route("/admin/usuarios/eliminar/<int:id>", methods=["POST"])
 @login_required
@@ -333,6 +329,51 @@ def eliminar_usuario(id):
     db.session.delete(usuario)
     db.session.commit()
     return jsonify({"mensaje": "Usuario eliminado"})
+
+# rutas de bibliotecario/usuarios
+from flask import jsonify
+
+@main.route('/admin/usuarios/agregar', methods=['GET', 'POST'])
+@login_required
+@roles_requeridos('administrador', 'bibliotecario')
+def agregar_usuario():
+    form = AgregarLectorPresencialForm()
+
+    if form.validate_on_submit():
+        nombre = form.nombre.data.strip()
+        correo = form.correo.data.strip()
+        documento = form.documento.data.strip()
+        direccion = form.direccion.data.strip()
+
+        nuevo_usuario = Usuario(
+            nombre=nombre,
+            apellido='-',
+            correo=correo,
+            documento=documento,
+            direccion=direccion,
+            telefono='-',
+            fecha_nacimiento=date(2000, 1, 1),
+            rol='lector*',
+            activo=True
+        )
+        nuevo_usuario.generar_llave_prestamo()
+        nuevo_usuario.set_password('000000')
+
+        try:
+            db.session.add(nuevo_usuario)
+            db.session.commit()
+            return jsonify({"success": True, "mensaje": "Lector presencial registrado correctamente."})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "mensaje": "Error al registrar usuario.", "errores": str(e)})
+
+    elif form.errors:
+        print("ERRORES:", form.errors)
+        return jsonify({"success": False, "mensaje": "Errores de validación.", "errores": form.errors})
+        
+
+    return render_template('registro_fragmento.html', form=form)
+
 
 
 #rutas de admin/libros
