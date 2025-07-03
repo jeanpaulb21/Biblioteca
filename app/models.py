@@ -45,7 +45,19 @@ class Usuario(db.Model, UserMixin):
     def __repr__(self):
         return f"<Usuario(id={self.id}, correo='{self.correo}')>"
 
+class HistorialReporte(db.Model):
+    __tablename__ = 'historial_reportes'
 
+    id = db.Column(db.Integer, primary_key=True)
+    nombre_reporte = db.Column(db.String(100), nullable=False)
+    ruta_archivo = db.Column(db.String(200), nullable=False)
+    fecha_generacion = db.Column(db.DateTime, default=datetime.utcnow)
+    admin_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
+
+    admin = db.relationship("Usuario", backref="reportes_generados")
+
+    def __repr__(self):
+        return f"<HistorialReporte(id={self.id}, nombre_reporte='{self.nombre_reporte}')>"
 
 
 # ------------------ MODELO LIBRO ------------------
@@ -119,7 +131,7 @@ class Reserva(db.Model):
     fecha_reserva = db.Column(db.DateTime, default=datetime.utcnow)
     fecha_expiracion = db.Column(db.Date)
     estado = db.Column(
-        Enum('activa', 'completada', 'cancelada', 'confirmada', name='estado_reserva'),
+        Enum('activa', 'cancelada','vencida', 'confirmada','eliminada', name='estado_reserva'),
         nullable=False,
         default='activa'
     )

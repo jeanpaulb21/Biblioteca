@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SelectField, DateField, SubmitField, TextAreaField, IntegerField, HiddenField
 from wtforms.validators import DataRequired, Length, EqualTo, Regexp, ValidationError, Optional, NumberRange, Email
 from app.models import Usuario
@@ -34,10 +35,35 @@ class RegistroForm(FlaskForm):
             raise ValidationError('Ya existe una cuenta con este número de documento.')
 
 class LibroForm(FlaskForm):
-    isbn = StringField('ISBN', validators=[DataRequired()])
-    titulo = StringField('Título', validators=[DataRequired()])
-    autor = StringField('Autor', validators=[DataRequired()])
-    descripcion = TextAreaField('Descripción')
+    isbn = StringField(
+        'ISBN',
+        validators=[
+            DataRequired(message="El ISBN es obligatorio."),
+            Length(min=10, max=17, message="El ISBN debe tener entre 10 y 17 caracteres."),
+            Regexp(r'^[0-9X-]+$', message='El ISBN solo puede contener números, guiones y "X".')
+        ]
+    )
+    titulo = StringField(
+        'Título',
+        validators=[
+            DataRequired(message="El título es obligatorio."),
+            Length(max=255, message="El título no puede exceder los 255 caracteres.")
+        ]
+    )
+    autor = StringField(
+        'Autor',
+        validators=[
+            DataRequired(message="El autor es obligatorio."),
+            Length(max=255, message="El nombre del autor no puede exceder los 255 caracteres.")
+        ]
+    )
+    descripcion = TextAreaField(
+        'Descripción',
+        validators=[
+            Optional() # Permite que sea opcional
+            # No se necesita Length si tu columna de DB es TEXT/LONGTEXT
+        ]
+    )
     categoria = SelectField(
         'Categoría',
         choices=[
@@ -50,14 +76,63 @@ class LibroForm(FlaskForm):
             ('historieta', 'Historieta'),
             ('biografia', 'Biografía'),
             ('cuento', 'Cuento'),
-            ('audiolibro', 'Audiolibro')
+            ('ciencia_ficcion', 'Ciencia Ficción'), # Agrego esta por los ejemplos de OpenLibrary
+            ('thriller', 'Thriller'), # Agrego esta por los ejemplos de OpenLibrary
+            ('fantasía', 'Fantasía'), # Agrego esta por los ejemplos de OpenLibrary
+            ('clasico', 'Clásico'), # Agrego esta por los ejemplos de OpenLibrary
+            ('terror', 'Terror'), # Agrego esta por los ejemplos de OpenLibrary
+            ('romance', 'Romance'), # Agrego esta por los ejemplos de OpenLibrary
+            ('historia', 'Historia'), # Agrego esta por los ejemplos de OpenLibrary
+            ('ficcion_criminal', 'Ficción Criminal'), # Agrego esta por los ejemplos de OpenLibrary
+            ('drama', 'Drama'), # Agrego esta por los ejemplos de OpenLibrary
+            ('comedia', 'Comedia'), # Agrego esta por los ejemplos de OpenLibrary
+            ('juvenil', 'Juvenil'), # Agrego esta por los ejemplos de OpenLibrary
+            ('sátira', 'Sátira'), # Agrego esta por los ejemplos de OpenLibrary
+            ('gonzo', 'Gonzo'), # Agrego esta por los ejemplos de OpenLibrary
+            ('realismo_magico', 'Realismo Mágico'), # Agrego esta por los ejemplos de OpenLibrary
+            ('novela_historica', 'Novela Histórica'), # Agrego esta por los ejemplos de OpenLibrary
+            ('otros', 'Otros'),
+            ('', 'Seleccione una categoría') # Opción por defecto para forzar la selección
         ],
-        validators=[DataRequired()]
+        validators=[
+            DataRequired(message="Debe seleccionar una categoría.") # Asegura que se seleccione una opción
+        ],
+        render_kw={"placeholder": "Seleccione una categoría"} # Placeholder para el campo
     )
-    editorial = StringField('Editorial')
-    fecha_publicacion = DateField('Fecha de Publicación', format='%Y-%m-%d', validators=[Optional()])
-    cantidad_total = IntegerField('Cantidad Total', validators=[DataRequired(), NumberRange(min=0)])
-    portada_url = HiddenField('URL de Portada', validators=[Optional()])
+    editorial = StringField(
+        'Editorial',
+        validators=[
+            Optional(),
+            Length(max=255, message="La editorial no puede exceder los 255 caracteres.")
+        ]
+    )
+    fecha_publicacion = DateField(
+        'Fecha de Publicación',
+        format='%Y-%m-%d',
+        validators=[Optional()]
+    )
+    cantidad_total = IntegerField(
+        'Cantidad Total',
+        validators=[
+            DataRequired(message="La cantidad total es obligatoria."),
+            NumberRange(min=0, message="La cantidad total no puede ser negativa.")
+        ]
+    )
+
+    portada = FileField(
+        'Portada',
+        validators=[
+            FileAllowed(['jpg', 'jpeg', 'png'], 'Solo se permiten imágenes JPG y PNG.')
+        ]
+    )
+
+    portada_url = HiddenField(
+        'URL de Portada',
+        validators=[
+            Optional(),
+            Length(max=500, message="La URL de la portada no puede exceder los 500 caracteres.") # Limita la longitud de la URL
+        ]
+    )
     submit = SubmitField('Guardar')
 
 class EditarLibroForm(FlaskForm):
@@ -112,15 +187,8 @@ class ReservaLectorForm(FlaskForm):
     submit = SubmitField('Reservar')
 
 class EditarReservaForm(FlaskForm):
-    usuario_id = SelectField('Usuario', coerce=int, validators=[DataRequired()])
     libro_id = SelectField('Libro', coerce=int, validators=[DataRequired()])
     fecha_expiracion = DateField('Fecha de Expiración', format='%Y-%m-%d', validators=[DataRequired()])
-    estado = SelectField('Estado', choices=[
-        ('activa', 'Activa'),
-        ('vencida', 'Vencida'),
-        ('cancelada', 'Cancelada'),
-        ('confirmada', 'Confirmada')
-    ], validators=[DataRequired()])
     submit = SubmitField('Guardar cambios')
 
 class AgregarLectorPresencialForm(FlaskForm):

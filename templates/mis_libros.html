@@ -64,7 +64,7 @@
                    <i class="bi bi-eye me-1"></i> Ver Detalles
                 </a>
 
-                {% if seccion == 'reservas' %}
+                {% if seccion == 'reservas' and item.estado == 'activa' %}
                 <form action="{{ url_for('main.cancelar_reserva_lector', reserva_id=item.id) }}" method="POST">
                   <button type="submit" class="btn btn-danger btn-sm w-100">
                     <i class="bi bi-x-circle me-1"></i> Cancelar Reserva

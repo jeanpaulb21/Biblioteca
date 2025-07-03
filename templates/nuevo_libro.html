@@ -126,11 +126,20 @@
         <img src="{{ form.portada_url.data or '/static/imagenes/portada_default.png' }}" alt="Portada del libro" class="img-preview">
       </div>
 
+      <!-- Campo de subida de archivo -->
+      <div class="mb-3">
+        {{ form.portada.label(class="form-label") }}
+        {{ form.portada(class="form-control") }}
+        {% for error in form.portada.errors %}
+          <div class="text-danger">{{ error }}</div>
+        {% endfor %}
+      </div>
+
       <!-- Campo oculto de portada_url -->
       {{ form.portada_url() }}
 
       <div class="d-flex justify-content-between mb-3">
-        <a href="{{ url_for('main.admin_libros') }}" class="btn btn-danger">Cancelar</a>
+        <a href="{{ url_for('main.mostrar_libros') }}" class="btn btn-danger">Cancelar</a>
         {{ form.submit(class="btn btn-success") }}
       </div>
 

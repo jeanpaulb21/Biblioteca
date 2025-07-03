@@ -3,6 +3,7 @@ from app.extensions import db, login_manager, mail
 from app.models import Usuario
 from app.routes import main
 from app.config import Config
+from app.utils import enviar_recordatorios
 from datetime import datetime
 
 def create_app():
@@ -42,4 +43,5 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
+    enviar_recordatorios(app)
     app.run(debug=True)
