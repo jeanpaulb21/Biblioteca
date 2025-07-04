@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, send_file, current_app, make_response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, send_file, current_app, make_response, session
 from flask_login import login_user, logout_user, login_required, current_user
 from flask_mail import Message
 from functools import wraps
@@ -9,7 +9,6 @@ from time import time
 from datetime import timedelta, date
 import os
 import requests
-# Importa las extensiones correctamente
 from app.extensions import db, login_manager, mail
 from app.models import Usuario, Libro, Prestamo, Reserva, Favorito, HistorialReporte
 from app.forms import RegistroForm, LibroForm, EditarLibroForm, EditarReservaForm, NuevaReservaForm, PrestamoForm, ReservaLectorForm, AgregarLectorPresencialForm,  EditarUsuarioForm
@@ -17,6 +16,15 @@ from app.utils import verificar_token, generar_token, generar_reporte_con_planti
 from app.libro import prestar_libro, devolver_libro
 from PIL import Image
 
+def nocache(view):
+    @wraps(view)
+    def no_cache(*args, **kwargs):
+        response = make_response(view(*args, **kwargs))
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+    return no_cache
 
 
 main = Blueprint('main', __name__)
@@ -74,6 +82,7 @@ def marcar_prestamos_atrasados():
 
 
 @main.route('/')
+@nocache
 def index():
     page = request.args.get('page', 1, type=int)
     libros = Libro.query.filter(Libro.estado != 'eliminado').paginate(page=page, per_page=12)
@@ -132,7 +141,19 @@ def registro():
     return render_template('registro.html', form=form)
 
 @main.route('/login', methods=['GET', 'POST'])
+@nocache
 def login():
+    if current_user.is_authenticated:
+        # Redirige según el rol si ya tiene sesión activa
+        if current_user.rol == 'administrador':
+            return redirect(url_for('main.index'))  # O tu ruta real de admin
+        elif current_user.rol == 'bibliotecario':
+            return redirect(url_for('main.index'))  # Ajusta si es diferente
+        elif current_user.rol == 'lector':
+            return redirect(url_for('main.catalogo'))
+        else:
+            return redirect(url_for('main.index'))
+
     if request.method == 'POST':
         correo = request.form['correo']
         password = request.form['password']
@@ -140,7 +161,6 @@ def login():
         usuario = Usuario.query.filter_by(correo=correo, activo=True).first()
 
         if usuario and usuario.check_password(password):
-            # ✅ Validar rol prohibido antes de permitir login
             if usuario.rol == 'lector*':
                 flash('Tu cuenta no está habilitada para acceder al sistema.', 'danger')
                 return redirect(url_for('main.login'))
@@ -148,7 +168,7 @@ def login():
             login_user(usuario)
             flash('Has iniciado sesión.', 'success')
 
-            # ✅ Redirección según rol válido
+            # Redirige según rol
             if usuario.rol == 'administrador':
                 return redirect(url_for('main.index'))
             elif usuario.rol == 'bibliotecario':
@@ -158,24 +178,25 @@ def login():
             else:
                 return redirect(url_for('main.index'))
 
-        else:
-            flash('Correo o contraseña incorrectos', 'danger')
-            return redirect(url_for('main.login'))
+        flash('Correo o contraseña incorrectos', 'danger')
+        return redirect(url_for('main.login'))
 
     return render_template('login.html')
-
 
 
 @main.route('/logout')
 @login_required
 def logout():
     logout_user()
+    session.clear()  # Asegura limpiar todo
     flash('Has cerrado sesión.', 'success')
     return redirect(url_for('main.index'))
+
 
 @main.route('/usuarios')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def lista_usuarios():
     usuarios = Usuario.query.all()
     return render_template('usuarios.html', usuarios=usuarios)
@@ -183,6 +204,7 @@ def lista_usuarios():
 @main.route('/usuarios/<int:usuario_id>/toggle', methods=['POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def toggle_usuario(usuario_id):
     usuario = Usuario.query.get_or_404(usuario_id)
 
@@ -204,6 +226,7 @@ def toggle_usuario(usuario_id):
 @main.route('/usuarios/<int:usuario_id>/cambiar_rol', methods=['POST'])
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def cambiar_rol(usuario_id):
     usuario = Usuario.query.get_or_404(usuario_id)
 
@@ -225,12 +248,14 @@ def cambiar_rol(usuario_id):
 @main.route('/admin/inicio', endpoint='inicio')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def admin_inicio():
     return render_template('admin.html', version=time())
 
 @main.route('/admin/inicio-contenido')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def inicio_contenido():
     total_administradores = Usuario.query.filter_by(rol='administrador').count()
     total_lectores = Usuario.query.filter_by(rol='lector').count()
@@ -438,6 +463,7 @@ def api_datos_libro(isbn):
 @main.route('/api/dashboard_data')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def dashboard_data():
     data = {
         'total_administradores': Usuario.query.filter_by(rol='administrador').count(),
@@ -453,6 +479,7 @@ def dashboard_data():
 @main.route('/admin/usuarios/mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_usuarios():
     usuarios = Usuario.query.all()
     return render_template('usuarios_mostrar.html', usuarios=usuarios)
@@ -460,6 +487,7 @@ def mostrar_usuarios():
 @main.route('/admin/usuarios/editar_formulario/<int:id>')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def editar_formulario_usuario(id):
     usuario = Usuario.query.get_or_404(id)
     form = EditarUsuarioForm(
@@ -477,6 +505,7 @@ def editar_formulario_usuario(id):
 @main.route('/admin/usuarios/editar/<int:id>', methods=['POST'])
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def editar_usuario(id):
     usuario = Usuario.query.get_or_404(id)
     form = EditarUsuarioForm()
@@ -499,6 +528,7 @@ def editar_usuario(id):
 @main.route("/admin/usuarios/eliminar/<int:id>", methods=["POST"])
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def eliminar_usuario(id):
     usuario = Usuario.query.get(id)
     db.session.delete(usuario)
@@ -511,6 +541,7 @@ from flask import jsonify
 @main.route('/admin/usuarios/agregar', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def agregar_usuario():
     form = AgregarLectorPresencialForm()
 
@@ -553,6 +584,7 @@ def agregar_usuario():
 @main.route('/admin/libros/nuevo', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def nuevo_libro():
     form = LibroForm()
 
@@ -637,6 +669,7 @@ def nuevo_libro():
 @main.route('/admin/libros/mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_libros():
     libros = Libro.query.filter(Libro.estado != 'eliminado').all()
     return render_template('libros_tabla.html', libros=libros)
@@ -644,6 +677,7 @@ def mostrar_libros():
 @main.route('/admin/libros/eliminar/<int:libro_id>', methods=['POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def eliminar_libro(libro_id):
     libro = Libro.query.get_or_404(libro_id)
     # Solo eliminamos si no hay préstamos activos
@@ -659,6 +693,7 @@ def eliminar_libro(libro_id):
 @main.route('/admin/libros/editar/<int:libro_id>', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def editar_libro(libro_id):
     libro = Libro.query.get_or_404(libro_id)
     form = EditarLibroForm(obj=libro)
@@ -694,19 +729,21 @@ def editar_libro(libro_id):
 @main.route('/admin/libros/scan', methods=['GET'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def escanear_libro():
     return render_template('escanear_libro.html')
 
 @main.route('/admin/reservas/nuevo', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def reservas_agregar():
     form = NuevaReservaForm()
 
     form.libro_id.choices = [(l.id, l.titulo) for l in Libro.query.all()]
 
     if request.method == 'GET':
-       form.fecha_expiracion.data = date.today() + timedelta(days=7)
+        form.fecha_expiracion.data = date.today() + timedelta(days=7)
 
     if form.validate_on_submit():
         usuario_id = request.form.get('usuario_id')
@@ -744,6 +781,7 @@ def reservas_agregar():
 @main.route('/reservar/<int:libro_id>', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('lector')
+@nocache
 def reservar_libro_lector(libro_id):
     libro = Libro.query.get_or_404(libro_id)
     form = ReservaLectorForm()
@@ -795,6 +833,7 @@ Gracias por usar Biblioteca Avocado 📚
 @main.route('/reservas/<int:reserva_id>/cancelar', methods=['POST'])
 @login_required
 @roles_requeridos('lector')
+@nocache
 def cancelar_reserva_lector(reserva_id):
     reserva = Reserva.query.get_or_404(reserva_id)
 
@@ -837,6 +876,7 @@ El equipo de Biblioteca Avocado
 @main.route('/admin/prestamos/nuevo', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario','lector')
+@nocache
 def nuevo_prestamo():
     form = PrestamoForm()
 
@@ -898,6 +938,7 @@ def nuevo_prestamo():
 @main.route('/admin/prestamos/devolver/<int:prestamo_id>', methods=['POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def devolver_prestamo(prestamo_id):
     prestamo = Prestamo.query.get_or_404(prestamo_id)
 
@@ -917,6 +958,7 @@ def devolver_prestamo(prestamo_id):
 @main.route('/admin/prestamos/mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_prestamos():
     prestamos = Prestamo.query.all()
     return render_template('prestamos_tabla.html', prestamos=prestamos)
@@ -925,6 +967,7 @@ def mostrar_prestamos():
 @main.route('/admin/reservas/editar/<int:reserva_id>', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def editar_reserva(reserva_id):
     reserva = Reserva.query.get_or_404(reserva_id)
     form = EditarReservaForm(obj=reserva)
@@ -962,6 +1005,7 @@ def editar_reserva(reserva_id):
 @main.route('/admin/reservas/eliminar/<int:reserva_id>', methods=['POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def eliminar_reserva(reserva_id):
     reserva = Reserva.query.get_or_404(reserva_id)
 
@@ -978,6 +1022,7 @@ def eliminar_reserva(reserva_id):
 @main.route('/admin/reservas/prestar/<int:reserva_id>', methods=['POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def prestar_reserva(reserva_id):
     reserva = Reserva.query.get_or_404(reserva_id)
 
@@ -1018,6 +1063,7 @@ def prestar_reserva(reserva_id):
 @main.route('/admin/reservas/mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def reservas_tabla():
     reservas = Reserva.query.filter(Reserva.estado != 'eliminada').all()
     return render_template('reservas_tabla.html', reservas=reservas)
@@ -1027,6 +1073,7 @@ def reservas_tabla():
 @main.route('/admin/reportes/historial')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def historial_reportes():
     historial = HistorialReporte.query.order_by(
         HistorialReporte.fecha_generacion.desc()
@@ -1038,6 +1085,7 @@ def historial_reportes():
 @main.route('/admin/reportes/atrasados')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def reporte_libros_atrasados():
     atrasados = Prestamo.query.filter(
         Prestamo.fecha_devolucion_esperada < date.today(),
@@ -1049,6 +1097,7 @@ def reporte_libros_atrasados():
 @main.route('/admin/reportes/descargar_reporte_atrasados')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def descargar_reporte_atrasados():
     atrasados = Prestamo.query.filter(
         Prestamo.fecha_devolucion_esperada < date.today(),
@@ -1080,6 +1129,7 @@ def descargar_reporte_atrasados():
 @main.route('/admin/reportes/prestados')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def reporte_libros_prestados():
     prestamos = Prestamo.query.filter(Prestamo.estado == 'activo').all()
     return render_template('reportes/fragmento_prestados.html', prestamos=prestamos)
@@ -1088,6 +1138,7 @@ def reporte_libros_prestados():
 @main.route('/admin/reportes/descargar_reporte_prestados')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def descargar_reporte_prestados():
     prestamos = Prestamo.query.filter(Prestamo.estado == 'activo').all()
     pdf = generar_reporte_prestados(prestamos)
@@ -1113,10 +1164,10 @@ def descargar_reporte_prestados():
     response.headers['Content-Disposition'] = f'inline; filename={nombre_archivo}'
     return response
 
-
 @main.route('/admin/reportes/populares')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def reporte_libros_populares():
     populares = db.session.query(
         Libro.id,
@@ -1128,13 +1179,13 @@ def reporte_libros_populares():
     ).outerjoin(Prestamo).outerjoin(Reserva).group_by(Libro.id).order_by(
         db.desc('total')
     ).limit(5).all()
-
     return render_template('reportes/fragmento_populares.html', populares=populares)
 
 
 @main.route('/admin/reportes/descargar_reporte_populares')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def descargar_reporte_populares():
     populares = db.session.query(
         Libro.id,
@@ -1175,10 +1226,11 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def extension_permitida(nombre_archivo):
     return '.' in nombre_archivo and \
-           nombre_archivo.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+        nombre_archivo.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @main.route('/admin/configuracion', methods=['GET', 'POST'])
 @login_required
+@nocache
 def configuracion():
     usuario = Usuario.query.get(current_user.id)
 
@@ -1216,6 +1268,7 @@ def configuracion():
 @main.route('/catalogo')
 @login_required
 @roles_requeridos('lector')
+@nocache
 def catalogo():
     page = request.args.get('page', 1, type=int)  # Página actual desde ?page=
     per_page = 12  # Ahora muestra 12 libros por página
@@ -1233,6 +1286,7 @@ def catalogo():
 #ruta de perfil
 @main.route('/perfil', methods=['GET', 'POST'])
 @login_required
+@nocache
 def perfil():
     if request.method == 'POST':
         usuario = Usuario.query.get(current_user.id)
@@ -1258,6 +1312,7 @@ def perfil():
 
 @main.route('/foto_perfil')
 @login_required
+@nocache
 def foto_perfil():
     if current_user.foto:
         ruta = os.path.join('static', current_user.foto.replace('/', os.sep))
@@ -1269,6 +1324,7 @@ def foto_perfil():
 
 @main.route('/libro/<int:libro_id>')
 @login_required
+@nocache
 def detalle_libro(libro_id):
     libro = Libro.query.get_or_404(libro_id)
     es_favorito = False
@@ -1280,6 +1336,7 @@ def detalle_libro(libro_id):
 @main.route('/favoritos/toggle/<int:libro_id>', methods=['POST'])
 @login_required
 @roles_requeridos('lector')
+@nocache
 def toggle_favorito(libro_id):
     libro = Libro.query.get_or_404(libro_id)
     favorito = Favorito.query.filter_by(usuario_id=current_user.id, libro_id=libro.id).first()
@@ -1298,6 +1355,7 @@ def toggle_favorito(libro_id):
 @main.route('/mis_libros')
 @login_required
 @roles_requeridos('lector')
+@nocache
 def mis_libros():
     # Obtener préstamos activos del usuario
     mis_prestamos = Prestamo.query.filter_by(usuario_id=current_user.id).all()
@@ -1307,9 +1365,9 @@ def mis_libros():
     mis_favoritos = Favorito.query.filter_by(usuario_id=current_user.id).all()
 
     return render_template('mis_libros.html',
-                           prestamos=mis_prestamos,
-                           reservas=mis_reservas,
-                           favoritos=mis_favoritos)
+        prestamos=mis_prestamos,
+        reservas=mis_reservas,
+        favoritos=mis_favoritos)
 
 @main.route('/recuperar', methods=['GET', 'POST'])
 def recuperar():
@@ -1358,6 +1416,7 @@ def restablecer(token):
 @main.route('/admin/usuarios/mostrar')
 @login_required
 @roles_requeridos('administrador')
+@nocache
 def usuarios_modal():
     usuarios = Usuario.query.all()
     return render_template('usuarios_mostrar.html', usuarios=usuarios)
@@ -1365,6 +1424,7 @@ def usuarios_modal():
 @main.route('/api/prestamos_mes')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def prestamos_por_mes():
     resultados = db.session.query(
         extract('month', Prestamo.fecha_prestamo).label('mes'),
@@ -1380,6 +1440,7 @@ def prestamos_por_mes():
 @main.route('/api/libros_populares')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def libros_populares():
     resultados = db.session.query(
         Libro.titulo,
@@ -1391,17 +1452,19 @@ def libros_populares():
 @main.route('/api/libros_atrasados')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def libros_atrasados():
     resultados = db.session.query(
         Libro.titulo,
         func.count(Prestamo.id).label('total')
     ).join(Prestamo).filter(Prestamo.estado == 'atrasado') \
-     .group_by(Libro.id).order_by(func.count(Prestamo.id).desc()).limit(5).all()
+    .group_by(Libro.id).order_by(func.count(Prestamo.id).desc()).limit(5).all()
 
     return jsonify([{'titulo': r.titulo, 'total': r.total} for r in resultados])
 
 @main.route('/ajax/buscar_usuario_por_llave')
 @login_required
+@nocache
 def ajax_buscar_usuario_por_llave():
     llave = request.args.get('llave_prestamo')
     usuario = Usuario.query.filter_by(llave_prestamo=llave).first()
@@ -1421,6 +1484,7 @@ def ajax_buscar_usuario_por_llave():
 @main.route('/admin/usuarios/solo_mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_usuarios_sencillo():
     usuarios = Usuario.query.all()
     return render_template('usuarios_mostrar_sencillo.html', usuarios=usuarios)
@@ -1428,6 +1492,7 @@ def mostrar_usuarios_sencillo():
 @main.route('/admin/libros/solo_mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_libros_sencillo():
     libros = Libro.query.filter(Libro.estado != 'eliminado').all()
     return render_template('libros_tabla_sencillo.html', libros=libros)
@@ -1435,6 +1500,7 @@ def mostrar_libros_sencillo():
 @main.route('/admin/prestamos/solo_mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_prestamos_sencillo():
     prestamos = Prestamo.query.all()
     return render_template('prestamos_tabla_sencillo.html', prestamos=prestamos)
@@ -1442,6 +1508,7 @@ def mostrar_prestamos_sencillo():
 @main.route('/admin/reservas/solo_mostrar')
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
+@nocache
 def mostrar_reservas_sencillo():
     reservas = Reserva.query.all()
     return render_template('reservas_tabla_sencillo.html', reservas=reservas)
