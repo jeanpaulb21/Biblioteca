@@ -1,15 +1,17 @@
-Flask
+Flask==3.0.0
 Flask-Login
 Flask-SQLAlchemy
+SQLAlchemy
 PyMySQL
 Werkzeug
-flask_wtf
+Flask-WTF
 WTForms
 email-validator
 requests
-sqlalchemy
 Flask-Mail
 Pillow
+itsdangerous
+gunicorn
 
 
 # pip install -r requirements.txt
