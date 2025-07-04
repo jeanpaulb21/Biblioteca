@@ -42,8 +42,10 @@
 <body>
   <div class="container">
     <div class="perfil-container text-center">
-      <!-- Foto de perfil -->
-      <img src="{{ current_user.foto or url_for('static', filename='imagenes/default_user.png') }}" alt="Foto de perfil" class="perfil-img">
+      <!-- ✅ Foto de perfil con fallback -->
+      <img src="{{ url_for('static', filename='fotos_perfil/' + (current_user.foto if current_user.foto else 'default_user.png')) }}"
+           alt="Foto de perfil"
+           class="perfil-img">
 
       <h3 class="mb-3">{{ current_user.username }}</h3>
 
@@ -73,10 +75,16 @@
         ✏️ Editar perfil
       </a>
 
-      <!-- Botón volver -->
-      <a href="{{ url_for('main.catalogo') }}" class="btn btn-secondary mt-4">
-        Volver al inicio
-      </a>
+      <!-- ✅ Botón volver según rol -->
+      {% if current_user.rol == 'lector' %}
+        <a href="{{ url_for('main.catalogo') }}" class="btn btn-secondary mt-4">
+          Volver al catálogo
+        </a>
+      {% else %}
+        <a href="{{ url_for('main.index') }}" class="btn btn-secondary mt-4">
+          Volver al inicio
+        </a>
+      {% endif %}
     </div>
   </div>
 </body>

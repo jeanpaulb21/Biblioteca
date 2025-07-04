@@ -12,11 +12,18 @@
 </head>
 <body>
   <div class="form-container text-center">
-    <img src="{{ url_for('static', filename='imagenes/logofinal.png') }}" alt="Logo Biblioteca" width="100" class="mb-3 rounded-circle border border-2 border-light">
+    <!-- ✅ Logo -->
+    <img 
+      src="{{ url_for('static', filename='imagenes/LOGO.png') }}" 
+      alt="Logo Biblioteca" 
+      width="100" 
+      class="mb-3 rounded-circle border border-2 border-light"
+      style="background-color: #1e3a8a; padding: 10px;">
+    
     <h2 class="fw-semibold mb-1">Crear cuenta</h2>
     <p class="text-muted mb-4 small">Regístrate para acceder a la biblioteca</p>
 
-    <form method="POST" action="{{ url_for('main.registro') }}">
+    <form method="POST" action="{{ url_for('main.registro') }}" id="registroForm">
       {{ form.hidden_tag() }}
 
       <div class="row g-3 text-start">
@@ -91,5 +98,13 @@
       </div>
     </form>
   </div>
+
+  <script>
+    document.getElementById('registroForm').addEventListener('submit', function(event) {
+      event.preventDefault(); // Detiene el envío
+      alert('Usuario registrado con éxito');
+      window.location.href = "{{ url_for('main.login') }}";
+    });
+  </script>
 </body>
 </html>

@@ -5,47 +5,12 @@
   <title>Nueva Reserva</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
-  <style>
-    body {
-      background: #f0f2f5;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-    }
-
-    .form-box {
-      background: #fff;
-      padding: 40px 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-      max-width: 480px;
-      width: 100%;
-    }
-
-    .form-box h2 {
-      font-weight: 700;
-      margin-bottom: 20px;
-      color: #1e293b;
-      text-align: center;
-    }
-
-    .descripcion-libro {
-      text-align: center;
-      font-size: 0.95rem;
-      color: #6b7280;
-      margin-bottom: 25px;
-    }
-
-    .btn {
-      min-width: 120px;
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/reservas_nuevo.css') }}">
 </head>
 <body>
 
   <div class="form-box">
-    <h2><i class="bi bi-journal-plus me-2"></i> Registrar Nueva Reserva</h2>
+    <h2><i class="bi bi-journal-bookmark me-2"></i> Registrar Nueva Reserva</h2>
     <p class="descripcion-libro">
       Coloca la llave del usuario para verificar su correo, selecciona el libro y guarda la reserva.
     </p>
@@ -87,10 +52,8 @@
       <!-- Fecha expiración oculta -->
       {{ form.fecha_expiracion(type="hidden") }}
 
-      <div class="d-flex justify-content-between mt-4">
-        <a href="{{ url_for('main.reservas_tabla') }}" class="btn btn-outline-danger">
-          <i class="bi bi-x-lg me-1"></i> Cancelar
-        </a>
+      <!-- Botón Guardar centrado -->
+      <div class="text-center mt-4">
         {{ form.submit(class="btn btn-success") }}
       </div>
     </form>

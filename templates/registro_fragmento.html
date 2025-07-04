@@ -9,64 +9,70 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
 
   <!-- Tu estilo memorizado -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/registro2.css') }}">
 </head>
 
 <body>
   <!-- Caja centrada con logo -->
   <div class="login-box text-center">
-    <!-- Logo arriba -->
-    <img src="{{ url_for('static', filename='imagenes/logofinal.png') }}" alt="Logo" class="mb-4" style="max-width: 150px;">
+    <!-- Título con ícono -->
+    <h2 class="mb-2">
+      <i class="bi bi-person-plus me-2"></i>
+      Agregar Usuario
+    </h2>
+    <p class="descripcion-libro mb-4">Complete los campos para añadir a un lector presencial.</p>
 
     <form method="POST" action="{{ url_for('main.agregar_usuario') }}">
       {{ form.hidden_tag() }}
 
-      <!-- Nombre -->
-      <div class="mb-3 text-start">
-        {{ form.nombre.label(class="form-label") }}
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-person"></i></span>
-          {{ form.nombre(class="form-control", placeholder="Nombre completo") }}
+      <div class="row">
+        <!-- Nombre -->
+        <div class="mb-3 text-start col-md-6">
+          {{ form.nombre.label(class="form-label") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-person"></i></span>
+            {{ form.nombre(class="form-control", placeholder="Nombre completo") }}
+          </div>
+          {% for error in form.nombre.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
-        {% for error in form.nombre.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
 
-      <!-- Documento -->
-      <div class="mb-3 text-start">
-        {{ form.documento.label(class="form-label") }}
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-card-text"></i></span>
-          {{ form.documento(class="form-control", placeholder="Número de Documento") }}
+        <!-- Documento -->
+        <div class="mb-3 text-start col-md-6">
+          {{ form.documento.label(class="form-label") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-card-text"></i></span>
+            {{ form.documento(class="form-control", placeholder="Número de Documento") }}
+          </div>
+          {% for error in form.documento.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
-        {% for error in form.documento.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
 
-      <!-- Correo -->
-      <div class="mb-3 text-start">
-        {{ form.correo.label(class="form-label") }}
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-          {{ form.correo(class="form-control", placeholder="Correo electrónico") }}
+        <!-- Correo -->
+        <div class="mb-3 text-start col-md-6">
+          {{ form.correo.label(class="form-label") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+            {{ form.correo(class="form-control", placeholder="Correo electrónico") }}
+          </div>
+          {% for error in form.correo.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
-        {% for error in form.correo.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
-      </div>
 
-      <!-- Dirección -->
-      <div class="mb-3 text-start">
-        {{ form.direccion.label(class="form-label") }}
-        <div class="input-group">
-          <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
-          {{ form.direccion(class="form-control", placeholder="Dirección") }}
+        <!-- Dirección -->
+        <div class="mb-3 text-start col-md-6">
+          {{ form.direccion.label(class="form-label") }}
+          <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-geo-alt"></i></span>
+            {{ form.direccion(class="form-control", placeholder="Dirección") }}
+          </div>
+          {% for error in form.direccion.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
-        {% for error in form.direccion.errors %}
-          <div class="text-danger small">{{ error }}</div>
-        {% endfor %}
       </div>
 
       <!-- Botón -->
@@ -100,7 +106,6 @@
                 alert(data.mensaje);
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalLibro'));
                 if (modal) modal.hide();
-                // actualizarTablaUsuarios(); // Si tienes función para recargar tabla
               } else {
                 alert(data.mensaje || 'Error al registrar usuario.');
                 console.log(data.errores || '');

@@ -35,15 +35,6 @@ body {
   color: var(--accent);
 }
 
-/* BOTÓN SIDEBAR */
-.toggle-icon {
-  transition: transform 0.3s ease;
-}
-
-#sidebarToggle:hover .toggle-icon {
-  transform: rotate(90deg);
-}
-
 /* DROPDOWN PERFIL */
 .dropdown-menu {
   background-color: var(--surface);
@@ -63,26 +54,31 @@ body {
 .sidebar {
   width: 190px;
   background: var(--surface);
-  padding: 20px 10px;
+  padding: 5px 10px 20px 10px; /* Menos espacio arriba */
   border-right: 1px solid #334155;
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease, padding 0.3s ease;
 }
 
-.sidebar.collapsed {
-  width: 80px;
+.sidebar img {
+  display: block;
+  margin-bottom: 8px; /* Espacio debajo del logo */
 }
 
 .sidebar-title {
   color: var(--text);
   font-size: 18px;
   font-weight: bold;
-  margin: 0;
+  margin-top: 0; /* Sin margen arriba */
+  margin-bottom: 10px;
 }
 
-.sidebar.collapsed .sidebar-title,
-.sidebar.collapsed #sidebarToggle {
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar.collapsed .sidebar-title {
   text-align: center;
   width: 100%;
 }
@@ -104,7 +100,6 @@ body {
 
 .sidebar a:hover {
   background-color: rgba(51, 65, 85, 0.3);
-  box-shadow: none;
 }
 
 .sidebar a.active {
@@ -137,7 +132,7 @@ body {
 }
 
 .menu-item.open .submenu {
-  max-height: 200px; /* suficiente para mostrar */
+  max-height: 500px; /* Ahora no se corta */
 }
 
 .submenu-link {

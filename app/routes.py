@@ -75,15 +75,13 @@ def marcar_prestamos_atrasados():
 
 @main.route('/')
 def index():
-    libros = Libro.query.all()
-    if current_user.is_authenticated:
-        if current_user.rol in ['administrador', 'bibliotecario']:
-            return redirect(url_for('main.inicio'))
-        elif current_user.rol == 'lector':
-            return redirect(url_for('main.catalogo'))
-        else:
-            return redirect(url_for('main.index'))
-    return render_template('index.html', libros=libros)
+    page = request.args.get('page', 1, type=int)
+    libros = Libro.query.filter(Libro.estado != 'eliminado').paginate(page=page, per_page=12)
+    # Detectar rol actual (si hay usuario logueado)
+    rol = current_user.rol if current_user.is_authenticated else None
+
+    return render_template('index.html', libros=libros, rol=rol)
+
 
 @main.route('/registro', methods=['GET', 'POST'])
 def registro():
@@ -152,9 +150,9 @@ def login():
 
             # ✅ Redirección según rol válido
             if usuario.rol == 'administrador':
-                return redirect(url_for('main.inicio'))
+                return redirect(url_for('main.index'))
             elif usuario.rol == 'bibliotecario':
-                return redirect(url_for('main.inicio'))
+                return redirect(url_for('main.index'))
             elif usuario.rol == 'lector':
                 return redirect(url_for('main.catalogo'))
             else:
@@ -447,10 +445,9 @@ def dashboard_data():
         'total_libros': Libro.query.count(),
         'total_prestamos': Prestamo.query.count() if 'Prestamo' in globals() else 0,
         'total_reservas': Reserva.query.count() if 'Reserva' in globals() else 0,
-
+        'total_reportes': HistorialReporte.query.count(),
     }
     return jsonify(data)
-
 
 
 @main.route('/admin/usuarios/mostrar')
@@ -553,8 +550,6 @@ def agregar_usuario():
     return render_template('registro_fragmento.html', form=form)
 
 #rutas de admin/libros
-
-
 @main.route('/admin/libros/nuevo', methods=['GET', 'POST'])
 @login_required
 @roles_requeridos('administrador', 'bibliotecario')
@@ -1222,12 +1217,16 @@ def configuracion():
 @login_required
 @roles_requeridos('lector')
 def catalogo():
-    libros = Libro.query.filter(Libro.estado != 'eliminado').all()
-    # Para los lectores, podríamos querer información adicional como si el libro está en sus favoritos
+    page = request.args.get('page', 1, type=int)  # Página actual desde ?page=
+    per_page = 12  # Ahora muestra 12 libros por página
+
+    # Aplica el filtro y paginación
+    libros = Libro.query.filter(Libro.estado != 'eliminado').paginate(page=page, per_page=per_page)
+
+    # Favoritos del usuario lector
     favoritos_ids = []
-    if current_user.is_authenticated:
-        if current_user.rol == 'lector':
-            favoritos_ids = [f.libro_id for f in current_user.favoritos]
+    if current_user.is_authenticated and current_user.rol == 'lector':
+        favoritos_ids = [f.libro_id for f in current_user.favoritos]
 
     return render_template('catalogo.html', libros=libros, favoritos_ids=favoritos_ids)
 
@@ -1270,13 +1269,13 @@ def foto_perfil():
 
 @main.route('/libro/<int:libro_id>')
 @login_required
-@roles_requeridos('lector')
 def detalle_libro(libro_id):
     libro = Libro.query.get_or_404(libro_id)
     es_favorito = False
     if current_user.is_authenticated and current_user.rol == 'lector':
         es_favorito = Favorito.query.filter_by(usuario_id=current_user.id, libro_id=libro.id).first() is not None
     return render_template('detalle_libro.html', libro=libro, es_favorito=es_favorito)
+
 
 @main.route('/favoritos/toggle/<int:libro_id>', methods=['POST'])
 @login_required
@@ -1459,3 +1458,8 @@ def buscar():
         ).all()
 
     return render_template('resultados_busqueda.html', resultados=resultados, consulta=consulta)
+
+@main.route('/categoria/<categoria>')
+def categoria(categoria):
+    libros = Libro.query.filter_by(categoria=categoria).all()
+    return render_template('categoria.html', libros=libros, categoria=categoria)
